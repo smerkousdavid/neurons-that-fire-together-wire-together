@@ -1,22 +1,26 @@
-CXX             := c++
+CXX             := g++
 OPTS            := -Ofast -march=native -DNDEBUG
-LANG            := -std=c++17
+LANG            := -std=c++14
 PICKY           := -Wall
 INCLUDES	:= -Isrc
-LIBS		+= -L/usr/local/lib -lomp
+LIBS		+= -L/usr/local/lib
+XDEFS		+= -fopenmp
 
 CXXFLAGS	+= $(DEFS) $(XDEFS) $(OPTS) $(DEBUG) $(PROFILE) $(LANG) $(PICKY) $(INCLUDES) $(DIAG)
 
-all		: $(TARGETS)
+all		: hopfield
 
-%.exe   	: %.o $(LOBJ)
-		  $(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
+hopfield: hopfield.o matrix.o vector.o
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LIBS)
 
-%.o 		: %.cpp
-		  $(CXX) -c $(CXXFLAGS) $< -o $@
+hopfield.o: src/hopfield.cpp src/matrix.hpp
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
-%.s 		: %.cpp
-		  $(CXX) -S $(CXXFLAGS) $<
+matrix.o: src/matrix.cpp src/matrix.hpp src/CImg.h
+	$(CXX) -c $(CXXFLAGS) $< -o $@
+
+vector.o: src/vector.cpp src/vector.hpp src/CImg.h
+	$(CXX) -c $(CXXFLAGS) $< -o $@
 
 clean		:
-		  /bin/rm -f $(TARGETS) $(TESTS) $(OBJECTS) $(PCHS) Matrix.s a.out *~ Makefile.bak makedep
+		  /bin/rm -f hopfield.o hopfield matrix.o vector.o
