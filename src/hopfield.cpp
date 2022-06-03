@@ -10,21 +10,21 @@
 // #define DEBUG
 
 // how many neurons to use for proportion convergence simulation
-#define PROPORTION_NEURONS_MIN 25
+#define PROPORTION_NEURONS_MIN 50
 #define PROPORTION_NEURONS_MAX 450
-#define PROPORTION_NEURONS_STEP 25
+#define PROPORTION_NEURONS_STEP 100
 
 // how many patterns to train on (starts with 0 extra as in only the original pattern)
-#define PROPORTION_TRAIN_PATTERNS_MAX static_cast<size_t>(std::ceil(static_cast<double>(num_neurons) / (std::sqrt(2.0 * std::log(static_cast<double>(num_neurons)))))) // absolute max for Hebb which is N / sqrt(2 * ln(N))
-#define PROPORTION_TRAIN_PATTERNS_STEP 3 // how many patterns to increment by
+#define PROPORTION_TRAIN_PATTERNS_MAX static_cast<size_t>(std::ceil(static_cast<double>(num_neurons) / (2.0 * std::log(static_cast<double>(num_neurons))))) // absolute max for Hebb which is N / sqrt(2 * ln(N))
+#define PROPORTION_TRAIN_PATTERNS_STEP static_cast<size_t>(std::max(1.0, PROPORTION_TRAIN_PATTERNS_MAX / 20.0)) // how many patterns to increment by
 
 // hamming from original pattern (starts at 1) of the test patterns to test convergence on 
 #define PROPORTION_RUN_PATTERN_HAMMING_MAX num_neurons * 0.5 // how far away to generate the maximum hamming patternt to test convergence (this value is proportion of number of neurons)
-#define PROPORTION_RUN_PATTERN_HAMMING_STEP 3 // how much to increase hamming each time
+#define PROPORTION_RUN_PATTERN_HAMMING_STEP static_cast<size_t>(std::max(1.0, PROPORTION_RUN_PATTERN_HAMMING_MAX / 100.0)) // how much to increase hamming each time
 
 // how many patterns and simulations to test on
 #define PROPORTION_RUN_PATTERNS 100 // how many patterns to test the proportion on
-#define PROPORTION_SIMULATION_PER_STEP 125  // run XX simulations for each step
+#define PROPORTION_SIMULATION_PER_STEP 200  // run XX simulations for each step
 
 
 int proportion_of_convergence(hopfield_t &hopfield, const size_t num_patterns, const size_t hamming, const bool train_hammed, const size_t train_hamming, const size_t num_train_patterns) {
@@ -101,14 +101,19 @@ void run_proportion_simulations() {
   data << "neurons,trained_patterns,test_patterns,test_pattern_hamming,simulations_per_step,min_proportion,mean_proportion,max_proportion,std_proportion,25_perc,mode,75_perc" << std::endl;
 
   for (size_t num_neurons = PROPORTION_NEURONS_MIN; num_neurons < PROPORTION_NEURONS_MAX; num_neurons += PROPORTION_NEURONS_STEP) {
-    for (size_t train_patterns = 0; train_patterns < PROPORTION_TRAIN_PATTERNS_MAX; train_patterns += PROPORTION_TRAIN_PATTERNS_STEP) {
+    // calculate maximum number of training patterns
+    size_t max_train_patterns = PROPORTION_TRAIN_PATTERNS_MAX;
+    size_t step_train_patterns = PROPORTION_TRAIN_PATTERNS_STEP;
+
+    for (size_t train_patterns = 0; train_patterns < max_train_patterns; train_patterns += step_train_patterns) {
       std::cout << "---- Running simulations on " << num_neurons << " neurons and " << train_patterns << " trained patterns ----" << std::endl;
 
       // calculate the maximum hamming
       size_t max_hamming = static_cast<size_t>(PROPORTION_RUN_PATTERN_HAMMING_MAX) + 1;
+      size_t step_hamming = PROPORTION_RUN_PATTERN_HAMMING_STEP;
 
       #pragma omp parallel for // multithread the task
-      for (size_t hamming = 1; hamming < max_hamming; hamming += PROPORTION_RUN_PATTERN_HAMMING_STEP) {
+      for (size_t hamming = 0; hamming < max_hamming; hamming += step_hamming) {
         // reuse network to reduce copying/zeroing
         hopfield_t hopfield(num_neurons, num_neurons);
 
